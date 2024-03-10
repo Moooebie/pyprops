@@ -1,5 +1,6 @@
 from pyprops import *
-from pyprops import _parse_helper
+from pyprops_parser import *
+from pyprops_parser import _parse_helper
 
 if __name__ == '__main__':
     f = ImpliesFormula(PropVar('p'), PropVar('q'))

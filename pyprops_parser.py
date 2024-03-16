@@ -1,15 +1,47 @@
 from pyprops import *
+import doctest
 
-def parse(text: str) -> Formula:
+def parse_formula(text: str) -> Formula:
     '''Parse a propositional formula recursively from the input text.
     
     Preconditions:
         - len(text) > 0
         - text.count('(') != text.count(')')
+    
+    >>> parse_formula('p IMPLIES q') == ImpliesFormula(PropVar('p'), PropVar('q'))
+    True
     '''
-    return rec_parse(text.strip())[0]
+    res = _to_nested_lists(text, [0])
+    return _rec_parser(res)
 
-def _parse_helper(segments: list[str]) -> Formula:
+
+def _formula_builder(subs: list[Formula], connective: str) -> Formula:
+    '''Create a Formula object based on the given sub-formulas and connective.
+    '''
+    err = 'invalid formula expression!'
+    if len(subs) == 0:
+        raise ValueError
+    if connective == '' and len(subs) == 1:
+        return subs.pop()
+    elif connective == 'AND':
+        return AndFormula(subs)
+    elif connective == 'OR':
+        return OrFormula(subs)
+    elif connective == 'IMPLIES':
+        if len(subs) != 2:
+            raise ValueError(err)
+        else:
+            return ImpliesFormula(subs[0], subs[1])
+    elif connective == 'IFF':
+        if len(subs) != 2:
+            raise ValueError(err)
+        else:
+            return IffFormula(subs[0], subs[1])
+    else:
+        raise ValueError(err)
+
+
+def _parse_helper(segments: list[str]) -> tuple[Formula, str]:
     '''Helper function for parsing text with no brackets into Formula.
     
     Preconditions:
@@ -20,7 +52,7 @@ def _parse_helper(segments: list[str]) -> Formula:
         raise ValueError('NOT must be used with brackets. (e.g. "NOT(p)" rather than "NOT p")')
     err = 'invalid formula expression!'
     conns = {'AND', 'OR', 'IMPLIES', 'IFF'}
-    if segments[0] in conns or segments[-1] in conns:
+    if len(segments) == 0 or segments[0] in conns or segments[-1] in conns:
         raise ValueError(err)
     # separate connectives and variables
     subs = []
@@ -40,140 +72,122 @@ def _parse_helper(segments: list[str]) -> Formula:
                 raise ValueError(err)
         else:
             subs.append(PropVar(segments[i]))
-    if connective == '':
-        return subs.pop()
-    elif connective == 'AND':
-        return AndFormula(subs)
-    elif connective == 'OR':
-        return OrFormula(subs)
-    elif connective == 'IMPLIES':
-        if len(subs) != 2:
-            raise ValueError(err)
-        else:
-            return ImpliesFormula(subs[0], subs[1])
-    else:
-        if len(subs) != 2:
-            raise ValueError(err)
-        else:
-            return IffFormula(subs[0], subs[1])
+    return _formula_builder(subs, connective), connective
 
-def rec_parse(text: str, index: int = 0) -> tuple[Formula, int]:
-    '''Helper function: parse a propositional formula recursively from the input text.
+
+def _to_nested_lists(text: str, cur_index: list[int]) -> list[str, list]:
+    '''This function handles the expression in plain text into nested lists based on parenthesis.
+    This function MUTATES the cur_index list to share the current index with all subroutines.
+    
+    >>> expected = [['p AND q AND', ['x OR y']], 'AND s']
+    >>> _to_nested_lists('(p AND q AND (x OR y)) AND s', [0]) == expected
+    True
+    '''  
+    lst = []
+    c = text[cur_index[0]]
+    while cur_index[0] < len(text):
+        c = text[cur_index[0]]
+        if c == '(':
+            cur_index[0] += 1
+            lst.append(_to_nested_lists(text, cur_index))
+        elif c == ')':
+            cur_index[0] += 1
+            break
+        else:
+            if len(lst) == 0 or not isinstance(lst[-1], str):
+                lst.append('')
+            lst[-1] += c
+            cur_index[0] += 1
+    # cleanning up
+    ret = []
+    for i in lst:
+        if isinstance(i, str):
+            stripped = i.strip()
+            if len(stripped) > 0:
+                ret.append(stripped)
+        else:
+            ret.append(i)
+    # check validty
+    if any({isinstance(ret[i], str) == isinstance(ret[i - 1], str) for i in range(1, len(ret))}):
+        raise ValueError('invalid formula expression!')
+    else:
+        return ret
+
+
+def _rec_parser(lst: list[str, list]) -> Formula:
+    '''Parse a nested list recursively to generate a Formula object.
+    
+    Preconditions:
+        - lst is a valid output of _to_nested_list.
     '''
     err = 'invalid formula expression!'
     conns = {'AND', 'OR', 'IMPLIES', 'IFF'}
-    # seperates brackets with other parts
-    segments = []
-    while index < len(text) and text[index] != ')':
-        if text[index] == '(':
-            res =  rec_parse(text[index + 1:], 0)
-            segments.append(res[0])
-            index += res[1] + 2
-        elif text[index] == ')':
-            break
+    # handling empty lists or and lists with a single string
+    if len(lst) == 0:
+        raise ValueError(err)
+    elif len(lst) == 1:
+        if isinstance(lst[0], str):
+            return _parse_helper(lst[0].strip().split())[0]
         else:
-            if len(segments) == 0 or not isinstance(segments[-1], str):
-                segments.append('')
-            segments[-1] += text[index]
-            index += 1
-    # trim empty strings
-    segments = [s for s in segments if not (isinstance(s, str) and s.isspace())]
-    # NOTE: DEBUG
-    # print(text, ':', segments)
-    # if just one element
-    if len(segments) == 1:
-        # if it is a string with no bracket, parse it
-        if isinstance(segments[0], str):
-            return (_parse_helper(segments[0].strip().split()), index)
-        # if it is a parsed Formula object, return it
-        else:
-            return (segments[0], index)
-    # otherwise, split each string
-    new_segments = []
-    for i in range(len(segments)):
-        if isinstance(segments[i], str):
-            # print('!!!', segments[i]) # NOTE: DEBUG
-            new_segments.append(segments[i].strip().split())
-        else:
-            new_segments.append(segments[i])
-    # print(new_segments) # NOTE: DEBUG
-    # parse it
-    subs = []
-    connective = ''
-    cur = None
-    prev = None
+            return _rec_parser(lst[0])
+    
+    # handling more complex lists
     i = 0
-    while i < len(new_segments):
-        # two parsed objects placed together is something like "(p AND q)(q OR p)", this is invalid.
-        if isinstance(cur, Formula) and isinstance(prev, Formula):
-            raise ValueError(err)
-        prev, cur = cur, new_segments[i]
-        # if this is a parsed Formula object, just append it
-        if isinstance(cur, Formula):
-            subs.append(cur)
-            i += 1
+    connective = ''
+    subs: list[Formula] = []
+    valid_conn = lambda conn, curr: curr in conns and (conn == '' or conn == curr)
+    while i < len(lst):
+        diff = 1
+        cur = lst[i]
+        if isinstance(cur, list):
+            subs.append(_rec_parser(cur))
+            i += diff
             continue
-        # if this is a single str
-        elif len(cur) == 1:
-            if cur[0] not in conns or cur[0] == 'NOT' or (connective != '' and connective != cur[0]):
+        segments = cur.strip().split()
+        next = None
+        # connective before
+        if i > 0:
+            if len(segments) == 0 or not valid_conn(connective, segments[0]):
                 raise ValueError(err)
             else:
-                connective = cur[0]
-                i += 1
+                connective = segments[0]
+                segments = segments[1:]
+            if len(segments) == 0 and i != len(segments) - 1:
+                i += diff
                 continue
-        b1 = i > 0 and isinstance(new_segments[i - 1], Formula)
-        b2 = i < len(new_segments) - 1 and isinstance(new_segments[i + 1], Formula)
-        # if after a parsed object
-        if b1:
-            if cur[0] not in conns or (connective != '' and connective != cur[0]):
+            elif len(segments) == 0:
                 raise ValueError(err)
-            connective = cur[0]
-            # if also before a parsed object
-            if b2:
-                if (cur[-1] == 'NOT') and (i < len(new_segments) - 1):
-                    subs.append(NotFormula(new_segments[i + 1]))
-                    i += 1
-                    if (len(cur) < 3) or (cur[-2] != connective):
-                        raise ValueError(err)
-                    else:
-                        subs.append(_parse_helper(cur[1:-2]))
-                elif (cur[-1] == 'NOT') or (cur[-1] != connective):
-                    raise ValueError(err)
-                else:
-                    subs.append(_parse_helper(cur[1:-1]))
-            # if just after a parsed object, not before anotjer
+        # connective after
+        if i != len(lst) - 1:
+            if segments[-1] == 'NOT':
+                next = NotFormula(_rec_parser(lst[i + 1]))
+                segments = segments[:-1]
+                diff += 1
+            if len(segments) == 0 and i == 0:
+                i += diff
+                continue
+            if len(segments) == 0 or not valid_conn(connective, segments[-1]):
+                raise ValueError(err)
             else:
-                subs.append(_parse_helper(cur[1:]))
-        # if just before a parsed object, not after another
-        elif b2:
-            if cur[-1] != 'NOT' and (cur[-1] not in conns or (connective != '' and connective != cur[-1])):
-                raise ValueError(err)
-            elif cur[-1] == 'NOT' and i < len(new_segments) - 1:
-                subs.append(NotFormula(new_segments[i + 1]))
-                i += 1
-                if (len(cur) < 2) or (cur[-2] not in conns) or (connective != '' and cur[-2] != connective):
-                    raise ValueError(err)
-                else:
-                    connective = cur[-2]
-                    subs.append(_parse_helper(cur[:-2]))
-            elif cur[-1] != 'NOT' and ((connective == '' and cur[-1] in conns) or connective == cur[-1]):
-                connective = cur[-1]
-                subs.append(_parse_helper(cur[:-1]))
-        i += 1
-        # print('!!!', connective) # NOTE: DEBUG
-    if connective == '':
-        return (subs.pop(), index)
-    elif connective == 'AND':
-        return (AndFormula(subs), index)
-    elif connective == 'OR':
-        return (OrFormula(subs), index)
-    elif connective == 'IMPLIES':
-        if len(subs) != 2:
+                connective = segments[-1]
+                segments = segments[:-1]
+        elif segments[-1] == 'NOT' or segments[-1] in conns:
             raise ValueError(err)
-        else:
-            return (ImpliesFormula(subs[0], subs[1]), index)
-    else:
-        if len(subs) != 2:
-            raise ValueError(err)
-        else:
-            return (IffFormula(subs[0], subs[1]), index)
+        if len(segments) > 0:
+            sub, subconn = _parse_helper(segments)
+            if connective in {'AND', 'OR'} and subconn == connective:
+                subs.extend(sub.subformulas)
+            else:
+                subs.append(sub)
+        if next is not None:
+            subs.append(next)
+        i += diff
+    return _formula_builder(subs, connective)
+
+
+# NOTE: FOR DEBUG PURPOSE
+if __name__ == '__main__':
+    doctest.testmod()
+    print(_to_nested_lists('p OR (q AND r AND (S AND T AND (Q OR P)))', [0]))
+    res = parse_formula('p OR (q AND r    AND   (   S AND T AND (Q OR P)  )  )  OR K')
+    print(res, type(res))

@@ -1,3 +1,5 @@
+VERSION = 1.1
+
 from __future__ import annotations
 from typing import Optional
 
@@ -120,12 +122,26 @@ class Formula:
     def trim(self) -> Formula:
         '''Return a trimmed (simplified) version of this formula.
         '''
+        # TODO: we did not have enough time to implement this
         return self
     
     def __str__(self) -> str:
         '''For the builtin str() function
         '''
         return self.to_text()
+    
+    def __eq__(self, other: object) -> bool:
+        '''Default comparison method
+        '''
+        if not isinstance(other, Formula) or other.to_text() != self.to_text():
+            return False
+        else:
+            return True
+    
+    def __hash__(self) -> int:
+        '''Makes hashable
+        '''
+        return hash(self.to_text())
 
 
 class PropVar(Formula):
@@ -300,13 +316,13 @@ class AndFormula(Formula):
     def negation(self) -> Formula:
         '''Return the negation of this formula.
         '''
-        return OrFormula({formula.negation() for formula in self.subformulas})
+        return OrFormula([formula.negation() for formula in self.subformulas])
 
     def to_nnf(self) -> Formula:
         '''Return a formula that is in Negation Normal Form that is logically
         equivalent to this formula.
         '''
-        nnfs = {formula.to_nnf() for formula in self.subformulas}
+        nnfs = [formula.to_nnf() for formula in self.subformulas]
         return AndFormula(nnfs)
 
 
@@ -365,13 +381,13 @@ class OrFormula(Formula):
     def negation(self) -> Formula:
         '''Return the negation of this formula.
         '''
-        return AndFormula({formula.negation() for formula in self.subformulas})
+        return AndFormula([formula.negation() for formula in self.subformulas])
 
     def to_nnf(self) -> Formula:
         '''Return a formula that is in Negation Normal Form that is logically
         equivalent to this formula.
         '''
-        nnfs = {formula.to_nnf() for formula in self.subformulas}
+        nnfs = [formula.to_nnf() for formula in self.subformulas]
         return OrFormula(nnfs)
 
 
@@ -423,7 +439,7 @@ class ImpliesFormula(Formula):
     def negation(self) -> Formula:
         '''Return the negation of this formula.
         '''
-        return AndFormula({self.hyp, self.concl.negation()})
+        return AndFormula([self.hyp, self.concl.negation()])
 
     def to_nnf(self) -> Formula:
         '''Return a formula that is in Negation Normal Form that is logically
@@ -481,9 +497,9 @@ class IffFormula(Formula):
         '''Return the negation of this formula.
         '''
         # NOT(p IFF q) == p XOR q == (p AND NOT(q)) OR (NOT(p) AND q)
-        f1 = AndFormula({self.sub1, self.sub2.negation()})
-        f2 = AndFormula({self.sub1.negation(), self.sub2})
-        return OrFormula({f1, f2})
+        f1 = AndFormula([self.sub1, self.sub2.negation()])
+        f2 = AndFormula([self.sub1.negation(), self.sub2])
+        return OrFormula([f1, f2])
 
     def to_nnf(self) -> Formula:
         '''Return a formula that is in Negation Normal Form that is logically

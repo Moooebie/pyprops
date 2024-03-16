@@ -1,6 +1,5 @@
 from pyprops import *
-from pyprops_parser import *
-from pyprops_parser import _parse_helper
+from pyprops_parser import parse_formula as parse
 
 if __name__ == '__main__':
     f = ImpliesFormula(PropVar('p'), PropVar('q'))
@@ -40,3 +39,10 @@ if __name__ == '__main__':
     print(f'"{f}", {type(f)}')
     print(f.to_cnf(), equivalent(f.to_cnf(), f))
     print(f.to_nnf(), equivalent(f.to_nnf(), f))
+
+    s  = set()
+    s.add(parse('p IMPLIES q'))
+    s.add(parse('p OR q'))
+    s.add(parse('NOT(p) OR q'))
+    s.add(parse('p IMPLIES q'))
+    print(s)

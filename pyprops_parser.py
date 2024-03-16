@@ -144,7 +144,6 @@ def _rec_parser(lst: list[str, list]) -> Formula:
             i += diff
             continue
         segments = cur.strip().split()
-        next = None
         # connective before
         if i > 0:
             if len(segments) == 0 or not valid_conn(connective, segments[0]):
@@ -158,12 +157,15 @@ def _rec_parser(lst: list[str, list]) -> Formula:
             elif len(segments) == 0:
                 raise ValueError(err)
         # connective after
+        next = None
         if i != len(lst) - 1:
             if segments[-1] == 'NOT':
                 next = NotFormula(_rec_parser(lst[i + 1]))
                 segments = segments[:-1]
                 diff += 1
             if len(segments) == 0 and i == 0:
+                if next is not None:
+                    subs.append(next)
                 i += diff
                 continue
             if len(segments) == 0 or not valid_conn(connective, segments[-1]):

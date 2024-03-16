@@ -1,10 +1,11 @@
-VERSION = 1.1
-
 from __future__ import annotations
 from typing import Optional
+import graphviz
 
 ########## CONSTANTS ##########
 # Connective types
+VERSION = 1.1
+
 VAR = 0
 NOT = 1
 AND = 2
@@ -119,6 +120,18 @@ class Formula:
         '''
         raise NotImplementedError
     
+    def to_graphviz(self) -> graphviz.Graph:
+        '''Return a graphviz graph for visualization
+        '''
+        G = graphviz.Graph()
+        self.augment_graphviz(G, None)
+        return G
+
+    def augment_graphviz(self, G: graphviz.Graph, parent: Optional[Formula]) -> None:
+        '''Augment a graphviz graph recursively
+        '''
+        raise NotImplementedError
+    
     def trim(self) -> Formula:
         '''Return a trimmed (simplified) version of this formula.
         '''
@@ -129,6 +142,11 @@ class Formula:
         '''For the builtin str() function
         '''
         return self.to_text()
+    
+    def __repr__(self) -> str:
+        '''No much difference as __str__
+        '''
+        return f'''parse_formula('{str(self)}')'''
     
     def __eq__(self, other: object) -> bool:
         '''Default comparison method
@@ -195,6 +213,13 @@ class PropVar(Formula):
         equivalent to this formula.
         '''
         return self
+    
+    def augment_graphviz(self, G: graphviz.Graph, parent: Optional[Formula]) -> None:
+        '''Augment a graph with a single propositional variable
+        '''
+        G.node(name=str(id(self)), label=self.name)
+        if parent is not None:
+            G.edge(str(id(self)), str(id(parent)))
 
 
 class NotFormula(Formula):
@@ -259,6 +284,17 @@ class NotFormula(Formula):
             return AndFormula([formula.negation().to_nnf() for formula in res[1].subformulas])
         else:
             return res[1].negation().to_nnf()
+
+    def augment_graphviz(self, G: graphviz.Graph, parent: Optional[Formula]) -> None:
+        '''Augment a graphviz graph recursively
+        '''
+        if self.subformula.type == VAR:
+            G.node(name=str(id(self)), label=f'¬{self.subformula.name}')
+        else:
+            G.node(name=str(id(self)), label='¬')
+            self.subformula.augment_graphviz(G, self)
+        if parent is not None:
+            G.edge(str(id(self)), str(id(parent)))
 
 
 class AndFormula(Formula):
@@ -325,6 +361,15 @@ class AndFormula(Formula):
         nnfs = [formula.to_nnf() for formula in self.subformulas]
         return AndFormula(nnfs)
 
+    def augment_graphviz(self, G: graphviz.Graph, parent: Optional[Formula]) -> None:
+        '''Augment a graphviz graph recursively
+        '''
+        G.node(name=str(id(self)), label='∧')
+        if parent is not None:
+            G.edge(str(id(self)), str(id(parent)))
+        for i in self.subformulas:
+            i.augment_graphviz(G, self)
+
 
 class OrFormula(Formula):
     '''Class to represent a formula that is equivalent to (p1 OR p2 OR ... OR p_k)
@@ -390,6 +435,15 @@ class OrFormula(Formula):
         nnfs = [formula.to_nnf() for formula in self.subformulas]
         return OrFormula(nnfs)
 
+    def augment_graphviz(self, G: graphviz.Graph, parent: Optional[Formula]) -> None:
+        '''Augment a graphviz graph recursively
+        '''
+        G.node(name=str(id(self)), label='∨')
+        if parent is not None:
+            G.edge(str(id(self)), str(id(parent)))
+        for i in self.subformulas:
+            i.augment_graphviz(G, self)
+
 
 class ImpliesFormula(Formula):
     '''Class to represent a formula that is equivalent to (p IMPLIES q)
@@ -446,6 +500,15 @@ class ImpliesFormula(Formula):
         equivalent to this formula.
         '''
         return ImpliesFormula(self.hyp.to_nnf(), self.concl.to_nnf())
+
+    def augment_graphviz(self, G: graphviz.Graph, parent: Optional[Formula]) -> None:
+        '''Augment a graphviz graph recursively
+        '''
+        G.node(name=str(id(self)), label='→')
+        if parent is not None:
+            G.edge(str(id(self)), str(id(parent)))
+        self.hyp.augment_graphviz(G, self)
+        self.concl.augment_graphviz(G, self)
 
 
 class IffFormula(Formula):
@@ -506,6 +569,15 @@ class IffFormula(Formula):
         equivalent to this formula.
         '''
         return IffFormula(self.sub1.to_nnf(), self.sub2.to_nnf())
+
+    def augment_graphviz(self, G: graphviz.Graph, parent: Optional[Formula]) -> None:
+        '''Augment a graphviz graph recursively
+        '''
+        G.node(name=str(id(self)), label='↔')
+        if parent is not None:
+            G.edge(str(id(self)), str(id(parent)))
+        self.sub1.augment_graphviz(G, self)
+        self.sub2.augment_graphviz(G, self)
 
 
 ########## TOOLKIT METHODS ##########

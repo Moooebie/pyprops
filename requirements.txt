@@ -1,0 +1,5 @@
+# for graph visualization
+graphviz
+
+# for GUI
+pyside6

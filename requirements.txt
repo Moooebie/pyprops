@@ -3,3 +3,5 @@ graphviz
 
 # for GUI
 pyside6
+
+python_ta

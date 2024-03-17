@@ -1,20 +1,23 @@
+'''PyProps Visualizer
+'''
 from __future__ import annotations
 from pyprops import *
 from pyprops_parser import *
 from PySide6 import QtCore, QtSvgWidgets, QtWidgets
-import sys, random, json, graphviz
+import sys, random, json
+
 
 class FormulaVisualizer(QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        
+
         # svg viewer
         self.svg_widget = QtSvgWidgets.QSvgWidget()
 
         # labels
         self.label_formula = QtWidgets.QLabel('Input your formula below:')
         self.label_ta = QtWidgets.QLabel('Input truth assignment below:')
-        
+
         # textboxes
         self.textbox_formula = QtWidgets.QTextEdit(self)
         self.textbox_ta = QtWidgets.QTextEdit(self)
@@ -52,7 +55,7 @@ class FormulaVisualizer(QtWidgets.QWidget):
         self.button_visualize.clicked.connect(self.visualize)
 
     @QtCore.Slot()
-    def visualize(self):
+    def visualize(self) -> None:
         '''QPushButton Event: visualzie the graph
         '''
         f_txt = self.textbox_formula.toPlainText()
@@ -70,7 +73,7 @@ class FormulaVisualizer(QtWidgets.QWidget):
         self.svg_widget.show()
 
     @QtCore.Slot()
-    def random_truth_assginment(self):
+    def random_truth_assginment(self) -> None:
         '''QPushButton Event: generate a random truth assignment
         '''
         f = parse_formula(self.textbox_formula.toPlainText())
@@ -79,35 +82,35 @@ class FormulaVisualizer(QtWidgets.QWidget):
         self.textbox_ta.setText(json.dumps(t))
 
     @QtCore.Slot()
-    def random_formula(self):
+    def random_formula(self) -> None:
         '''QPushButton Event: generate a random formula
         '''
         f = formula_expression_generator(5, 5, 10)
         self.textbox_formula.setText(f)
 
     @QtCore.Slot()
-    def formula_negate(self):
+    def formula_negate(self) -> None:
         '''QPushButton Event: Convert the formula into its negation
         '''
         f = parse_formula(self.textbox_formula.toPlainText())
         self.textbox_formula.setText(str(f.negation()))
 
     @QtCore.Slot()
-    def to_cnf(self):
+    def to_cnf(self) -> None:
         '''QPushButton Event: Convert the formula into Conjunctive Normal Form
         '''
         f = parse_formula(self.textbox_formula.toPlainText())
         self.textbox_formula.setText(str(f.to_cnf()))
 
     @QtCore.Slot()
-    def to_dnf(self):
+    def to_dnf(self) -> None:
         '''QPushButton Event: Convert the formula into Disjunctive Normal Form
         '''
         f = parse_formula(self.textbox_formula.toPlainText())
         self.textbox_formula.setText(str(f.to_dnf()))
 
     @QtCore.Slot()
-    def to_nnf(self):
+    def to_nnf(self) -> None:
         '''QPushButton Event: Convert the formula into Negation Normal Form
         '''
         f = parse_formula(self.textbox_formula.toPlainText())
@@ -115,6 +118,12 @@ class FormulaVisualizer(QtWidgets.QWidget):
 
 
 if __name__ == '__main__':
+    # import python_ta
+    # python_ta.check_all(config={
+    #     'extra-imports': ['pyprops', 'doctest', 'random'],  # the names (strs) of imported modules
+    #     'allowed-io': [],     # the names (strs) of functions that call print/open/input
+    #     'max-line-length': 120
+    # })
     app = QtWidgets.QApplication([])
     # app.setStyle('Breeze')
     widget = FormulaVisualizer()

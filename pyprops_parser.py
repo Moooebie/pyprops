@@ -1,5 +1,8 @@
+'''PyProps Parser
+'''
 from pyprops import *
 import doctest, random
+
 
 def parse_formula(text: str) -> Formula:
     '''Parse a propositional formula recursively from the input text.
@@ -82,7 +85,7 @@ def _to_nested_lists(text: str, cur_index: list[int]) -> list[str, list]:
     >>> expected = [['p AND q AND', ['x OR y']], 'AND s']
     >>> _to_nested_lists('(p AND q AND (x OR y)) AND s', [0]) == expected
     True
-    '''  
+    ''' 
     lst = []
     c = text[cur_index[0]]
     while cur_index[0] < len(text):
@@ -130,7 +133,7 @@ def _rec_parser(lst: list[str, list]) -> Formula:
             return _parse_helper(lst[0].strip().split())[0]
         else:
             return _rec_parser(lst[0])
-    
+
     # handling more complex lists
     i = 0
     connective = ''
@@ -150,7 +153,7 @@ def _rec_parser(lst: list[str, list]) -> Formula:
         # print(cur)
         # print(segments)
         # print()
-        
+
         # connective after
         next = None
         if i != len(lst) - 1:
@@ -200,8 +203,7 @@ def _rec_parser(lst: list[str, list]) -> Formula:
 
 def formula_expression_generator(
     num_vars: int, max_depth: int, length: int,
-    _cur_vars: Optional[set] = None
-    ) -> str:
+    _cur_vars: Optional[set] = None) -> str:
     '''Randomly generate a plain-text formula expression.
     
     Parameters:
@@ -242,6 +244,7 @@ def formula_expression_generator(
     else:
         return conns[random.randrange(2)].join(ret)
 
+
 def test_correctness() -> None:
     '''Test correctness of PyProps.
     NOTE: this may take quite a while to run.
@@ -259,7 +262,7 @@ def test_correctness() -> None:
             assert equivalent(f, f.to_dnf())
             assert equivalent(f, f.to_nnf())
         except Exception as e:
-            print('FAILED FORMULA: ', f_txt)
+            # print('FAILED FORMULA: ', f_txt)
             raise e
 
 

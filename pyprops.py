@@ -4,7 +4,7 @@ import graphviz
 
 ########## CONSTANTS ##########
 # Connective types
-VERSION = 1.1
+VERSION = 1.2
 
 VAR = 0
 NOT = 1
@@ -120,15 +120,16 @@ class Formula:
         '''
         raise NotImplementedError
     
-    def to_graphviz(self, truth_assignment: Optional[dict] = None) -> graphviz.Graph:
+    def to_graphviz(
+        self, truth_assignment: Optional[dict] = None, **kwargs) -> graphviz.Graph:
         '''Return a graphviz graph for visualization, optionally under a specific truth assignment
         '''
-        G = graphviz.Graph()
+        G = graphviz.Graph(**kwargs)
         self.augment_graphviz(G, None, truth_assignment)
         return G
 
     def augment_graphviz(
-        self, G: graphviz.Graph, parent: Optional[Formula], truth_assignment: Optional[dict]) -> None:
+        self, G: graphviz.Graph, parent: Optional[Formula] = None, truth_assignment: Optional[dict] = None) -> None:
         '''Augment a graphviz graph recursively
         '''
         raise NotImplementedError
@@ -186,8 +187,10 @@ class PropVar(Formula):
         '''
         if not self.name in truth_assignment:
             raise ValueError(f'truth assignment missing variable: {self.name}')
+        elif truth_assignment[self.name]:
+            return True
         else:
-            return truth_assignment[self.name]
+            return False
 
     def num_connectives(self) -> int:
         '''Return number of connectives in this formula.
@@ -216,7 +219,7 @@ class PropVar(Formula):
         return self
     
     def augment_graphviz(
-        self, G: graphviz.Graph, parent: Optional[Formula], truth_assignment: Optional[dict]) -> None:
+        self, G: graphviz.Graph, parent: Optional[Formula] = None, truth_assignment: Optional[dict] = None) -> None:
         '''Augment a graph recursively
         '''
         c = '#ffffff00'
@@ -295,7 +298,7 @@ class NotFormula(Formula):
             return res[1].negation().to_nnf()
 
     def augment_graphviz(
-        self, G: graphviz.Graph, parent: Optional[Formula], truth_assignment: Optional[dict]) -> None:
+        self, G: graphviz.Graph, parent: Optional[Formula] = None, truth_assignment: Optional[dict] = None) -> None:
         '''Augment a graph recursively
         '''
         c = '#ffffff00'
@@ -376,7 +379,7 @@ class AndFormula(Formula):
         return AndFormula(nnfs)
 
     def augment_graphviz(
-        self, G: graphviz.Graph, parent: Optional[Formula], truth_assignment: Optional[dict]) -> None:
+        self, G: graphviz.Graph, parent: Optional[Formula] = None, truth_assignment: Optional[dict] = None) -> None:
         '''Augment a graph recursively
         '''
         c = '#ffffff00'
@@ -458,7 +461,7 @@ class OrFormula(Formula):
         return OrFormula(nnfs)
 
     def augment_graphviz(
-        self, G: graphviz.Graph, parent: Optional[Formula], truth_assignment: Optional[dict]) -> None:
+        self, G: graphviz.Graph, parent: Optional[Formula] = None, truth_assignment: Optional[dict] = None) -> None:
         '''Augment a graph recursively
         '''
         c = '#ffffff00'
@@ -532,7 +535,7 @@ class ImpliesFormula(Formula):
         return ImpliesFormula(self.hyp.to_nnf(), self.concl.to_nnf())
 
     def augment_graphviz(
-        self, G: graphviz.Graph, parent: Optional[Formula], truth_assignment: Optional[dict]) -> None:
+        self, G: graphviz.Graph, parent: Optional[Formula] = None, truth_assignment: Optional[dict] = None) -> None:
         '''Augment a graph recursively
         '''
         c = '#ffffff00'
@@ -609,7 +612,7 @@ class IffFormula(Formula):
         return IffFormula(self.sub1.to_nnf(), self.sub2.to_nnf())
 
     def augment_graphviz(
-        self, G: graphviz.Graph, parent: Optional[Formula], truth_assignment: Optional[dict]) -> None:
+        self, G: graphviz.Graph, parent: Optional[Formula] = None, truth_assignment: Optional[dict] = None) -> None:
         '''Augment a graph recursively
         '''
         c = '#ffffff00'
@@ -667,6 +670,11 @@ def to_cnf(formula: Formula) -> Formula:
             else:
                 subs.append(NotFormula(PropVar(v)))
         formulas.append(OrFormula(subs))
+    if len(formulas) == 0:
+        # in case we have a tautology
+        vars = formula.get_variables()
+        for v in vars:
+            formulas.append(OrFormula([NotFormula(PropVar(v)), PropVar(v)]))
     return AndFormula(formulas)
 
 def to_dnf(formula: Formula) -> Formula:
@@ -683,5 +691,9 @@ def to_dnf(formula: Formula) -> Formula:
             else:
                 subs.append(NotFormula(PropVar(v)))
         formulas.append(AndFormula(subs))
+    if len(formulas) == 0:
+        # in case we have a fallacy
+        vars = formula.get_variables()
+        for v in vars:
+            formulas.append(AndFormula([NotFormula(PropVar(v)), PropVar(v)]))
     return OrFormula(formulas)
-

@@ -243,14 +243,25 @@ def formula_expression_generator(
         return conns[random.randrange(2)].join(ret)
 
 def test_correctness() -> None:
-    '''Test correctness of the parser.
+    '''Test correctness of PyProps.
+    NOTE: this may take quite a while to run.
     '''
-    for i in range(1000):
-        num_vars = random.randrange(1, 27)
+    for i in range(20):
+        num_vars = random.randrange(1, 15)
         max_depth = random.randrange(1, 10)
-        length = random.randrange(1, 40)
-        f = formula_expression_generator(num_vars, max_depth, length)
-        assert f == str(parse_formula(f))
+        length = random.randrange(1, 20)
+        f_txt = formula_expression_generator(num_vars, max_depth, length)
+        f = parse_formula(f_txt)
+        try:
+            assert str(f) == f_txt
+            assert equivalent(f, f.negation().negation())
+            assert equivalent(f, f.to_cnf())
+            assert equivalent(f, f.to_dnf())
+            assert equivalent(f, f.to_nnf())
+        except Exception as e:
+            print('FAILED FORMULA: ', f_txt)
+            raise e
+
 
 # NOTE: FOR DEBUG PURPOSE
 if __name__ == '__main__':

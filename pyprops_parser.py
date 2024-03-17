@@ -1,5 +1,5 @@
 from pyprops import *
-import doctest
+import doctest, random
 
 def parse_formula(text: str) -> Formula:
     '''Parse a propositional formula recursively from the input text.
@@ -136,6 +136,7 @@ def _rec_parser(lst: list[str, list]) -> Formula:
     connective = ''
     subs: list[Formula] = []
     valid_conn = lambda conn, curr: curr in conns and (conn == '' or conn == curr)
+    # print('NEW CALL')  # NOTE: DEBUG
     while i < len(lst):
         diff = 1
         cur = lst[i]
@@ -144,18 +145,12 @@ def _rec_parser(lst: list[str, list]) -> Formula:
             i += diff
             continue
         segments = cur.strip().split()
-        # connective before
-        if i > 0:
-            if len(segments) == 0 or not valid_conn(connective, segments[0]):
-                raise ValueError(err)
-            else:
-                connective = segments[0]
-                segments = segments[1:]
-            if len(segments) == 0 and i != len(segments) - 1:
-                i += diff
-                continue
-            elif len(segments) == 0:
-                raise ValueError(err)
+        # NOTE: DEBUG
+        # print(lst)
+        # print(cur)
+        # print(segments)
+        # print()
+        
         # connective after
         next = None
         if i != len(lst) - 1:
@@ -172,9 +167,25 @@ def _rec_parser(lst: list[str, list]) -> Formula:
                 raise ValueError(err)
             else:
                 connective = segments[-1]
-                segments = segments[:-1]
+                if len(segments) > 1:
+                    segments = segments[:-1]
         elif segments[-1] == 'NOT' or segments[-1] in conns:
             raise ValueError(err)
+        # connective before
+        if i > 0:
+            if len(segments) == 0 or not valid_conn(connective, segments[0]):
+                raise ValueError(err)
+            else:
+                connective = segments[0]
+                segments = segments[1:]
+            if len(segments) == 0 and i != len(segments) - 1:
+                i += diff
+                if next is not None:
+                    subs.append(next)
+                continue
+            elif len(segments) == 0:
+                raise ValueError(err)
+        # processing current subformula
         if len(segments) > 0:
             sub, subconn = _parse_helper(segments)
             if connective in {'AND', 'OR'} and subconn == connective:
@@ -187,9 +198,65 @@ def _rec_parser(lst: list[str, list]) -> Formula:
     return _formula_builder(subs, connective)
 
 
+def formula_expression_generator(
+    num_vars: int, max_depth: int, length: int,
+    _cur_vars: Optional[set] = None
+    ) -> str:
+    '''Randomly generate a plain-text formula expression.
+    
+    Parameters:
+        - num_vars: number of propositional variables
+        - max_depth: max depth of the formula
+        - length: max length, counted by number of occurences of prop vars
+        
+    Preconditions:
+        - min({num_vars, max_depth, length}) > 0
+        - num_vars <= 26  # currently using one-letter lower cased var names only
+    '''
+    conns = [' AND ', ' OR ', ' IMPLIES ', ' IFF ']
+    if _cur_vars is None:
+        _cur_vars = set()
+        while len(_cur_vars) < num_vars:
+            _cur_vars.add(chr(97 + random.randrange(0, 26)))
+    ret = []
+    while length != 0:
+        if max_depth > 1 and length > 1 and random.randrange(0, 2):
+            diff = random.randrange(1, length)
+            cur = formula_expression_generator(num_vars, max_depth - 1, diff, _cur_vars)
+            if diff != 1:
+                cur = '(' + cur + ')'
+        else:
+            diff = 1
+            cur = list(_cur_vars)[random.randrange(len(_cur_vars))]
+        if random.randrange(0, 2):
+            if cur[0] != '(':
+                cur = f'NOT({cur})'
+            else:
+                cur = 'NOT' + cur
+        ret.append(cur)
+        length -= diff
+    if len(ret) == 1:
+        return ret[0]
+    elif len(ret) == 2:
+        return conns[random.randrange(4)].join(ret)
+    else:
+        return conns[random.randrange(2)].join(ret)
+
+def test_correctness() -> None:
+    '''Test correctness of the parser.
+    '''
+    for i in range(1000):
+        num_vars = random.randrange(1, 27)
+        max_depth = random.randrange(1, 10)
+        length = random.randrange(1, 40)
+        f = formula_expression_generator(num_vars, max_depth, length)
+        assert f == str(parse_formula(f))
+
 # NOTE: FOR DEBUG PURPOSE
 if __name__ == '__main__':
     doctest.testmod()
     print(_to_nested_lists('p OR (q AND r AND (S AND T AND (Q OR P)))', [0]))
     res = parse_formula('p OR (q AND r    AND   (   S AND T AND (Q OR P)  )  )  OR K')
     print(res, type(res))
+    test_correctness()
+    print('tests finished successfully.')

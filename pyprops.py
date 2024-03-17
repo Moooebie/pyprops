@@ -120,14 +120,15 @@ class Formula:
         '''
         raise NotImplementedError
     
-    def to_graphviz(self) -> graphviz.Graph:
-        '''Return a graphviz graph for visualization
+    def to_graphviz(self, truth_assignment: Optional[dict] = None) -> graphviz.Graph:
+        '''Return a graphviz graph for visualization, optionally under a specific truth assignment
         '''
         G = graphviz.Graph()
-        self.augment_graphviz(G, None)
+        self.augment_graphviz(G, None, truth_assignment)
         return G
 
-    def augment_graphviz(self, G: graphviz.Graph, parent: Optional[Formula]) -> None:
+    def augment_graphviz(
+        self, G: graphviz.Graph, parent: Optional[Formula], truth_assignment: Optional[dict]) -> None:
         '''Augment a graphviz graph recursively
         '''
         raise NotImplementedError
@@ -214,10 +215,18 @@ class PropVar(Formula):
         '''
         return self
     
-    def augment_graphviz(self, G: graphviz.Graph, parent: Optional[Formula]) -> None:
-        '''Augment a graph with a single propositional variable
+    def augment_graphviz(
+        self, G: graphviz.Graph, parent: Optional[Formula], truth_assignment: Optional[dict]) -> None:
+        '''Augment a graph recursively
         '''
-        G.node(name=str(id(self)), label=self.name)
+        c = '#ffffff00'
+        if truth_assignment is not None:
+            if self.evaluate(truth_assignment):
+                c = '#ebffdcff'
+            else:
+                c = '#ffd2d2'
+        s =  'star' if parent is None else 'ellipse'
+        G.node(name=str(id(self)), label=self.name, fillcolor=c, style='filled', shape=s)
         if parent is not None:
             G.edge(str(id(self)), str(id(parent)))
 
@@ -285,14 +294,19 @@ class NotFormula(Formula):
         else:
             return res[1].negation().to_nnf()
 
-    def augment_graphviz(self, G: graphviz.Graph, parent: Optional[Formula]) -> None:
-        '''Augment a graphviz graph recursively
+    def augment_graphviz(
+        self, G: graphviz.Graph, parent: Optional[Formula], truth_assignment: Optional[dict]) -> None:
+        '''Augment a graph recursively
         '''
-        if self.subformula.type == VAR:
-            G.node(name=str(id(self)), label=f'¬{self.subformula.name}')
-        else:
-            G.node(name=str(id(self)), label='¬')
-            self.subformula.augment_graphviz(G, self)
+        c = '#ffffff00'
+        if truth_assignment is not None:
+            if self.evaluate(truth_assignment):
+                c = '#ebffdcff'
+            else:
+                c = '#ffd2d2'
+        s =  'star' if parent is None else 'triangle'
+        G.node(name=str(id(self)), label='NOT', fillcolor=c, style='filled', shape=s)
+        self.subformula.augment_graphviz(G, self, truth_assignment)
         if parent is not None:
             G.edge(str(id(self)), str(id(parent)))
 
@@ -361,14 +375,22 @@ class AndFormula(Formula):
         nnfs = [formula.to_nnf() for formula in self.subformulas]
         return AndFormula(nnfs)
 
-    def augment_graphviz(self, G: graphviz.Graph, parent: Optional[Formula]) -> None:
-        '''Augment a graphviz graph recursively
+    def augment_graphviz(
+        self, G: graphviz.Graph, parent: Optional[Formula], truth_assignment: Optional[dict]) -> None:
+        '''Augment a graph recursively
         '''
-        G.node(name=str(id(self)), label='∧')
+        c = '#ffffff00'
+        if truth_assignment is not None:
+            if self.evaluate(truth_assignment):
+                c = '#ebffdcff'
+            else:
+                c = '#ffd2d2'
+        s =  'star' if parent is None else 'house'
+        G.node(name=str(id(self)), label='AND', fillcolor=c, style='filled', shape=s)
         if parent is not None:
             G.edge(str(id(self)), str(id(parent)))
         for i in self.subformulas:
-            i.augment_graphviz(G, self)
+            i.augment_graphviz(G, self, truth_assignment)
 
 
 class OrFormula(Formula):
@@ -435,14 +457,22 @@ class OrFormula(Formula):
         nnfs = [formula.to_nnf() for formula in self.subformulas]
         return OrFormula(nnfs)
 
-    def augment_graphviz(self, G: graphviz.Graph, parent: Optional[Formula]) -> None:
-        '''Augment a graphviz graph recursively
+    def augment_graphviz(
+        self, G: graphviz.Graph, parent: Optional[Formula], truth_assignment: Optional[dict]) -> None:
+        '''Augment a graph recursively
         '''
-        G.node(name=str(id(self)), label='∨')
+        c = '#ffffff00'
+        if truth_assignment is not None:
+            if self.evaluate(truth_assignment):
+                c = '#ebffdcff'
+            else:
+                c = '#ffd2d2'
+        s =  'star' if parent is None else 'invhouse'
+        G.node(name=str(id(self)), label='OR', fillcolor=c, style='filled', shape=s)
         if parent is not None:
             G.edge(str(id(self)), str(id(parent)))
         for i in self.subformulas:
-            i.augment_graphviz(G, self)
+            i.augment_graphviz(G, self, truth_assignment)
 
 
 class ImpliesFormula(Formula):
@@ -501,14 +531,22 @@ class ImpliesFormula(Formula):
         '''
         return ImpliesFormula(self.hyp.to_nnf(), self.concl.to_nnf())
 
-    def augment_graphviz(self, G: graphviz.Graph, parent: Optional[Formula]) -> None:
-        '''Augment a graphviz graph recursively
+    def augment_graphviz(
+        self, G: graphviz.Graph, parent: Optional[Formula], truth_assignment: Optional[dict]) -> None:
+        '''Augment a graph recursively
         '''
-        G.node(name=str(id(self)), label='→')
+        c = '#ffffff00'
+        if truth_assignment is not None:
+            if self.evaluate(truth_assignment):
+                c = '#ebffdcff'
+            else:
+                c = '#ffd2d2'
+        s =  'star' if parent is None else 'rarrow'
+        G.node(name=str(id(self)), label='IMPLIES', fillcolor=c, style='filled', shape=s)
         if parent is not None:
             G.edge(str(id(self)), str(id(parent)))
-        self.hyp.augment_graphviz(G, self)
-        self.concl.augment_graphviz(G, self)
+        self.hyp.augment_graphviz(G, self, truth_assignment)
+        self.concl.augment_graphviz(G, self, truth_assignment)
 
 
 class IffFormula(Formula):
@@ -570,14 +608,22 @@ class IffFormula(Formula):
         '''
         return IffFormula(self.sub1.to_nnf(), self.sub2.to_nnf())
 
-    def augment_graphviz(self, G: graphviz.Graph, parent: Optional[Formula]) -> None:
-        '''Augment a graphviz graph recursively
+    def augment_graphviz(
+        self, G: graphviz.Graph, parent: Optional[Formula], truth_assignment: Optional[dict]) -> None:
+        '''Augment a graph recursively
         '''
-        G.node(name=str(id(self)), label='↔')
+        c = '#ffffff00'
+        if truth_assignment is not None:
+            if self.evaluate(truth_assignment):
+                c = '#ebffdcff'
+            else:
+                c = '#ffd2d2'
+        s =  'star' if parent is None else 'diamond'
+        G.node(name=str(id(self)), label='IFF', fillcolor=c, style='filled', shape=s)
         if parent is not None:
             G.edge(str(id(self)), str(id(parent)))
-        self.sub1.augment_graphviz(G, self)
-        self.sub2.augment_graphviz(G, self)
+        self.sub1.augment_graphviz(G, self, truth_assignment)
+        self.sub2.augment_graphviz(G, self, truth_assignment)
 
 
 ########## TOOLKIT METHODS ##########

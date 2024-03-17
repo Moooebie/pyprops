@@ -38,7 +38,11 @@ if __name__ == '__main__':
     # G.node('sub2')
     # G.edge('test', 'sub1')
     # G.edge('test', 'sub2')
-    G = parse_formula('NOT(p) OR q').to_graphviz()
+    # G = parse_formula('NOT(p) OR q').to_graphviz()
+    f = parse_formula(formula_expression_generator(5, 5, 10))
+    truth_assignments = f.generate_truth_assignments()
+    t = truth_assignments[random.randrange(len(truth_assignments))]
+    G = f.to_graphviz(t)
     svg = G.pipe(format='svg')
     app = QtWidgets.QApplication([])
     widget = MyWidget(svg)

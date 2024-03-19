@@ -4,6 +4,9 @@
 A Python based toolkit for proposition logic.
 
 ## Setup
+**NOTE: your OS needs Graphviz backend installed for the visualizer to work.** If you use macOS, this can be done by `brew install graphviz`; if you use Windows, this can be done by `winget install graphviz`.
+
+
 For Linux/macOS/POSIX, run the following in the source directory:
 ```sh
 python -m venv ./venv  # create a virtual environment

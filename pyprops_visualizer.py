@@ -6,6 +6,11 @@ from pyprops_parser import *
 from PySide6 import QtCore, QtSvgWidgets, QtWidgets
 import sys, random, json
 
+# Uncomment this if you use Windows
+# Replace graphviz_path with your Graphviz installation dir
+# import os
+# graphviz_path = 'C:/Program Files/Graphviz/bin/'
+# os.environ["PATH"] += os.pathsep + graphviz_path
 
 class FormulaVisualizer(QtWidgets.QWidget):
     def __init__(self) -> None:

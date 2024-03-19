@@ -139,7 +139,6 @@ def _rec_parser(lst: list[str, list]) -> Formula:
     connective = ''
     subs: list[Formula] = []
     valid_conn = lambda conn, curr: curr in conns and (conn == '' or conn == curr)
-    # print('NEW CALL')  # NOTE: DEBUG
     while i < len(lst):
         diff = 1
         cur = lst[i]
@@ -148,12 +147,6 @@ def _rec_parser(lst: list[str, list]) -> Formula:
             i += diff
             continue
         segments = cur.strip().split()
-        # NOTE: DEBUG
-        # print(lst)
-        # print(cur)
-        # print(segments)
-        # print()
-
         # connective after
         next = None
         if i != len(lst) - 1:
@@ -262,7 +255,7 @@ def test_correctness() -> None:
             assert equivalent(f, f.to_dnf())
             assert equivalent(f, f.to_nnf())
         except Exception as e:
-            # print('FAILED FORMULA: ', f_txt)
+            print('FAILED FORMULA: ', f_txt)
             raise e
 
 

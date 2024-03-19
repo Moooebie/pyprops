@@ -20,6 +20,7 @@ python -m venv ./venv  # create a virtual environment
 .\venv\Scripts\Activate.ps1  # activate venv
 pip install -r requirements.txt  # install dependencies
 ```
+If the visualizer does not work, uncomment the relevant lines at beginning of `pyprops_visualizer.py`.
 
 
 ## Usage (Python)

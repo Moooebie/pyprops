@@ -1,7 +1,9 @@
 # PyProps
-*Version 1.2*
+*Version 1.2_pyta_fix*
 
 A Python based toolkit for proposition logic.
+
+*This is a branch that includes fixes of all Python TA errors in all files. We are submitting this to show that we do have the ability to fix all these errors, however we would like to argue that doing so is not really going to help improve the human readability of the program (especially for `pyprops_parser.py`).*
 
 ## Setup
 **NOTE: your OS needs Graphviz backend installed for the visualizer to work.** If you use macOS, this can be done by `brew install graphviz`; if you use Windows, this can be done by `winget install graphviz`.

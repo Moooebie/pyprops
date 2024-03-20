@@ -1,7 +1,10 @@
 '''PyProps Parser
 '''
-from pyprops import *
-import doctest, random
+import doctest
+import random
+from typing import Optional
+from pyprops import Formula, PropVar, NotFormula, AndFormula, \
+    OrFormula, ImpliesFormula, IffFormula, equivalent
 
 
 def parse_formula(text: str) -> Formula:
@@ -14,8 +17,8 @@ def parse_formula(text: str) -> Formula:
     >>> parse_formula('p IMPLIES q') == ImpliesFormula(PropVar('p'), PropVar('q'))
     True
     '''
-    res = _to_nested_lists(text, [0])
-    return _rec_parser(res)
+    nested_list = _to_nested_lists(text, [0])
+    return _rec_parser(nested_list)
 
 
 def _formula_builder(subs: list[Formula], connective: str) -> Formula:
@@ -62,8 +65,8 @@ def _parse_helper(segments: list[str]) -> tuple[Formula, str]:
     connective = ''
     prev = ''
     cur = ''
-    for i in range(len(segments)):
-        prev, cur = cur, segments[i]
+    for i in segments:
+        prev, cur = cur, i
         # if two connectives or two variables are ajacent, this is an invalid formula expression.
         if prev != '' and ((prev in conns) == (cur in conns)):
             raise ValueError(err)
@@ -74,7 +77,7 @@ def _parse_helper(segments: list[str]) -> tuple[Formula, str]:
             elif connective != cur:
                 raise ValueError(err)
         else:
-            subs.append(PropVar(segments[i]))
+            subs.append(PropVar(i))
     return _formula_builder(subs, connective), connective
 
 
@@ -85,7 +88,7 @@ def _to_nested_lists(text: str, cur_index: list[int]) -> list[str, list]:
     >>> expected = [['p AND q AND', ['x OR y']], 'AND s']
     >>> _to_nested_lists('(p AND q AND (x OR y)) AND s', [0]) == expected
     True
-    ''' 
+    '''
     lst = []
     c = text[cur_index[0]]
     while cur_index[0] < len(text):
@@ -111,10 +114,64 @@ def _to_nested_lists(text: str, cur_index: list[int]) -> list[str, list]:
         else:
             ret.append(i)
     # check validty
-    if any({isinstance(ret[i], str) == isinstance(ret[i - 1], str) for i in range(1, len(ret))}):
+    if any({isinstance(ret[j], str) == isinstance(ret[j - 1], str) for j in range(1, len(ret))}):
         raise ValueError('invalid formula expression!')
     else:
         return ret
+
+
+def _valid_conn(conn: str, curr: str) -> bool:
+    '''Local temporary function to verify validity of connectives.
+    '''
+    conns = {'AND', 'OR', 'IMPLIES', 'IFF'}
+    return curr in conns and conn in {'', curr}
+
+
+def _rec_parser_after(lst: list, segments: list, subs: list, i: int, connective: str) -> tuple:
+    '''Function to process the case that there should be a connective after this subformula.
+        - Yes, this is ridiculous. It is just for satisfying Python TA.
+    '''
+    err = 'invalid formula expression!'
+    conns = {'AND', 'OR', 'IMPLIES', 'IFF'}
+    nxt = None
+    diff = 0
+    if i != len(lst) - 1:
+        if segments[-1] == 'NOT':
+            nxt = NotFormula(_rec_parser(lst[i + 1]))
+            segments = segments[:-1]
+            diff += 1
+        if len(segments) == 0 and i == 0:
+            if nxt is not None:
+                subs.append(nxt)
+            return diff, nxt, segments, connective, True
+        if len(segments) == 0 or not _valid_conn(connective, segments[-1]):
+            raise ValueError(err)
+        else:
+            connective = segments[-1]
+            if len(segments) > 1:
+                segments = segments[:-1]
+    elif segments[-1] == 'NOT' or segments[-1] in conns:
+        raise ValueError(err)
+    return diff, nxt, segments, connective, False
+
+
+def _rec_parser_before(segments: list, i: int, connective: str) -> tuple:
+    '''Function to process the case that there should be a connective before this subformula.
+        - Yes, this is ridiculous. It is just for satisfying Python TA.
+    '''
+    diff = 0
+    err = 'invalid formula expression!'
+    if i > 0:
+        if len(segments) == 0 or not _valid_conn(connective, segments[0]):
+            raise ValueError(err)
+        else:
+            connective = segments[0]
+            segments = segments[1:]
+        if len(segments) == 0 and i != len(segments) - 1:
+            return diff, segments, connective, True
+        elif len(segments) == 0:
+            raise ValueError(err)
+    return diff, segments, connective, False
 
 
 def _rec_parser(lst: list[str, list]) -> Formula:
@@ -124,21 +181,18 @@ def _rec_parser(lst: list[str, list]) -> Formula:
         - lst is a valid output of _to_nested_list.
     '''
     err = 'invalid formula expression!'
-    conns = {'AND', 'OR', 'IMPLIES', 'IFF'}
     # handling empty lists or and lists with a single string
     if len(lst) == 0:
         raise ValueError(err)
+    elif len(lst) == 1 and isinstance(lst[0], str):
+        return _parse_helper(lst[0].strip().split())[0]
     elif len(lst) == 1:
-        if isinstance(lst[0], str):
-            return _parse_helper(lst[0].strip().split())[0]
-        else:
-            return _rec_parser(lst[0])
+        return _rec_parser(lst[0])
 
     # handling more complex lists
     i = 0
     connective = ''
     subs: list[Formula] = []
-    valid_conn = lambda conn, curr: curr in conns and (conn == '' or conn == curr)
     while i < len(lst):
         diff = 1
         cur = lst[i]
@@ -148,39 +202,24 @@ def _rec_parser(lst: list[str, list]) -> Formula:
             continue
         segments = cur.strip().split()
         # connective after
-        next = None
-        if i != len(lst) - 1:
-            if segments[-1] == 'NOT':
-                next = NotFormula(_rec_parser(lst[i + 1]))
-                segments = segments[:-1]
-                diff += 1
-            if len(segments) == 0 and i == 0:
-                if next is not None:
-                    subs.append(next)
-                i += diff
-                continue
-            if len(segments) == 0 or not valid_conn(connective, segments[-1]):
-                raise ValueError(err)
-            else:
-                connective = segments[-1]
-                if len(segments) > 1:
-                    segments = segments[:-1]
-        elif segments[-1] == 'NOT' or segments[-1] in conns:
-            raise ValueError(err)
+        res_after = _rec_parser_after(lst, segments, subs, i, connective)
+        diff += res_after[0]
+        nxt = res_after[1]
+        segments = res_after[2]
+        connective = res_after[3]
+        if res_after[4]:
+            i += diff
+            continue
         # connective before
-        if i > 0:
-            if len(segments) == 0 or not valid_conn(connective, segments[0]):
-                raise ValueError(err)
-            else:
-                connective = segments[0]
-                segments = segments[1:]
-            if len(segments) == 0 and i != len(segments) - 1:
-                i += diff
-                if next is not None:
-                    subs.append(next)
-                continue
-            elif len(segments) == 0:
-                raise ValueError(err)
+        res_before = _rec_parser_before(segments, i, connective)
+        diff += res_before[0]
+        segments = res_before[1]
+        connective = res_before[2]
+        if res_before[3]:
+            if nxt is not None:
+                subs.append(nxt)
+            i += diff
+            continue
         # processing current subformula
         if len(segments) > 0:
             sub, subconn = _parse_helper(segments)
@@ -188,15 +227,15 @@ def _rec_parser(lst: list[str, list]) -> Formula:
                 subs.extend(sub.subformulas)
             else:
                 subs.append(sub)
-        if next is not None:
-            subs.append(next)
+        if nxt is not None:
+            subs.append(nxt)
         i += diff
     return _formula_builder(subs, connective)
 
 
 def formula_expression_generator(
-    num_vars: int, max_depth: int, length: int,
-    _cur_vars: Optional[set] = None) -> str:
+        num_vars: int, max_depth: int,
+        length: int, _cur_vars: Optional[set] = None) -> str:
     '''Randomly generate a plain-text formula expression.
     
     Parameters:
@@ -242,7 +281,7 @@ def test_correctness() -> None:
     '''Test correctness of PyProps.
     NOTE: this may take quite a while to run.
     '''
-    for i in range(20):
+    for _ in range(20):
         num_vars = random.randrange(1, 15)
         max_depth = random.randrange(1, 10)
         length = random.randrange(1, 20)
@@ -261,6 +300,12 @@ def test_correctness() -> None:
 
 # NOTE: FOR DEBUG PURPOSE
 if __name__ == '__main__':
+    # import python_ta
+    # python_ta.check_all(config={
+    #     'extra-imports': ['pyprops', 'doctest', 'random'],  # the names (strs) of imported modules
+    #     'allowed-io': ['test_correctness'],     # the names (strs) of functions that call print/open/input
+    #     'max-line-length': 120
+    # })
     doctest.testmod()
     print(_to_nested_lists('p OR (q AND r AND (S AND T AND (Q OR P)))', [0]))
     res = parse_formula('p OR (q AND r    AND   (   S AND T AND (Q OR P)  )  )  OR K')

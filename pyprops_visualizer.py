@@ -7,13 +7,6 @@ import json
 from PySide6 import QtCore, QtSvgWidgets, QtWidgets
 from pyprops_parser import parse_formula, formula_expression_generator
 
-# NOTE: Uncomment this if you use Windows and got the error of Graphviz
-# not found even after installing it.
-# Replace graphviz_path with your Graphviz installation directory.
-# import os
-# graphviz_path = 'C:/Program Files/Graphviz/bin/'
-# os.environ["PATH"] += os.pathsep + graphviz_path
-
 
 class FormulaVisualizer(QtWidgets.QWidget):
     '''PyQT class for the visualizer window.
@@ -140,18 +133,24 @@ class FormulaVisualizer(QtWidgets.QWidget):
         self.tb['textbox_formula'].setText(str(f.to_nnf()))
 
 
-if __name__ == '__main__':
-    # import python_ta
-    # python_ta.check_all(config={
-    #     'extra-imports': [
-    #         'pyprops', 'doctest', 'random', 'PySide6', 'json', 'sys', 'pyprops_parser'
-    #     ],  # the names (strs) of imported modules
-    #     'allowed-io': [],     # the names (strs) of functions that call print/open/input
-    #     'max-line-length': 120
-    # })
+def load_visualizer() -> None:
+    '''Load the visualizer window.
+    '''
     app = QtWidgets.QApplication([])
     # app.setStyle('Breeze')
     widget = FormulaVisualizer()
     widget.resize(500, 600)
     widget.show()
     sys.exit(app.exec())
+
+
+if __name__ == '__main__':
+    import python_ta
+    python_ta.check_all(config={
+        'extra-imports': [
+            'pyprops', 'doctest', 'random', 'PySide6', 'json', 'sys', 'pyprops_parser'
+        ],  # the names (strs) of imported modules
+        'allowed-io': [],     # the names (strs) of functions that call print/open/input
+        'max-line-length': 120
+    })
+    # load_visualizer()

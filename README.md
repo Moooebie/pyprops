@@ -6,7 +6,7 @@ A Python based toolkit for proposition logic.
 *This is a branch that includes fixes of all Python TA errors in all files. We are submitting this to show that we do have the ability to fix all these errors, however we would like to argue that doing so is not really going to help improve the human readability of the program (especially for `pyprops_parser.py`).*
 
 ## Setup
-**NOTE: your OS needs Graphviz backend installed for the visualizer to work.** If you use macOS, this can be done by `brew install graphviz`; if you use Windows, this can be done by `winget install graphviz`.
+**Sorry that we haven't realize untile the last moment that the library `graphviz` actually requires a backend in addition to the Python library in order for the visualizer to work. We have included the binaries for Windows x86_64 but If you use macOS, it can be done by `brew install graphviz` (assuming homebrew is installed).**
 
 
 For Linux/macOS/POSIX, run the following in the source directory:
@@ -22,7 +22,7 @@ python -m venv ./venv  # create a virtual environment
 .\venv\Scripts\Activate.ps1  # activate venv
 pip install -r requirements.txt  # install dependencies
 ```
-If the visualizer does not work, uncomment the relevant lines at beginning of `pyprops_visualizer.py`.
+<!-- If the visualizer does not work, uncomment the relevant lines at beginning of `pyprops_visualizer.py`. -->
 
 
 ## Usage (Python)

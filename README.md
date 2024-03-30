@@ -37,7 +37,7 @@ f = ImpliesFormula(NotFormula(PropVar('p')), PropVar('q'))
 f = parse_formula('p IMPLIES q')
 
 # comparing equations
-g = parse_formula('NOT(p) or Q')
+g = parse_formula('NOT(p) or q')
 print(equivalent(f, g))  # True - these formulas are equivalent
 print(f == g)  # False - this compares f.to_text() with g.to_text()
 
